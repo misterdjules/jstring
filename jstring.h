@@ -18,6 +18,7 @@ extern "C" {
 #endif /* _WIN32 */
 
 JSTRING_API char* jstr_join(const char** tokens, const char* separator);
+JSTRING_API char* jstr_format(const char* format, ...);
 
 #ifdef __cplusplus
 }
