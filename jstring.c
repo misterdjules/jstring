@@ -10,6 +10,14 @@
 
 CREATE_DEBUG_CTX(jstring);
 
+/*
+ * Joins all the elements of the strings array "tokens" into a single
+ * string with each token separated by the string "separator".
+ * Returns the pointer to the newly allocated string if successful,
+ * NULL otherwise.
+ * If "separator" is NULL, the tokens are joined without using any
+ * separator.
+ */
 char* jstr_join(const char** tokens, const char* separator)
 {
 	size_t total_size         = 0;
@@ -65,6 +73,15 @@ char* jstr_join(const char** tokens, const char* separator)
 	return joined_string_start;
 }
 
+/*
+ * Takes a format string "format" and a variable list of variables,
+ * returns a newly allocated string that points to the formatted string.
+ *
+ * Returns NULL if format is NULL.
+ *
+ * Implementation is largely inspired by man snprintf, see "make_message"
+ * implementation in the "EXAMPLE" section of the man page.
+ */
 char* jstr_format(const char* format, ...)
 {
 	int nb_bytes_written = 0;
@@ -80,9 +97,17 @@ char* jstr_format(const char* format, ...)
 	while (buffer_too_small)
 	{
 		va_start(ap, format);
+		/*
+		 * First, try to write the string into the currently allocated space
+		 * that may be too small.
+		 */
 		nb_bytes_written = vsnprintf(buffer, buffer_size, format, ap);
 		va_end(ap);
 
+		/*
+		 * If vsnprintf could write the whole string, then the
+		 * pointer to the formatted string is returned.
+		 */
 		if (nb_bytes_written > -1 && nb_bytes_written < buffer_size)
 		{
 			buffer_too_small = 0;
@@ -91,10 +116,23 @@ char* jstr_format(const char* format, ...)
 
 		if (nb_bytes_written > -1)
 		{
+			/*
+			 * Otherwise, if vsnprintf's return value is > -1,
+			 * it means that we're using glibc 2.1 and it contains
+			 * the number of bytes necessary to write the whole
+			 * string. Realloc the buffer to have this size so
+			 * vsnprintf will be successful during the next iteration.
+			 */
 			buffer_size = nb_bytes_written;
 		}
 		else
 		{
+			/*
+			 * If vsnprintf's return value is -1 or less, it means
+			 * that we're using glibc 2.0, and there's no way to get the
+			 * exact size that would be needed to write the whole string, so
+			 * we make a guess by doubling the buffer's size.
+			 */
 			buffer_size *= 2;
 		}
 
